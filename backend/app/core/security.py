@@ -1,7 +1,7 @@
 ﻿from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Literal
+from typing import Awaitable, Callable, Literal
 
 import jwt
 from fastapi import Depends, HTTPException, status
@@ -59,8 +59,12 @@ async def get_current_user(
     )
 
 
-def require_role(*allowed_roles: Literal["user", "lawyer", "admin"]):
-    async def dependency(user: AuthenticatedUser = Depends(get_current_user)) -> AuthenticatedUser:
+def require_role(
+    *allowed_roles: Literal["user", "lawyer", "admin"]
+) -> Callable[[AuthenticatedUser], Awaitable[AuthenticatedUser]]:
+    async def dependency(
+        user: AuthenticatedUser = Depends(get_current_user),
+    ) -> AuthenticatedUser:
         if user.role not in allowed_roles:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Insufficient role permissions")
         return user
