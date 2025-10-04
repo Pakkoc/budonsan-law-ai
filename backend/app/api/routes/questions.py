@@ -36,7 +36,7 @@ async def get_question(
 async def create_answer(
     payload: AnswerCreate,
     question_id: str = Path(..., description="Question identifier"),
-    user: AuthenticatedUser = Depends(deps.lawyer_user()),
+    user: AuthenticatedUser = Depends(deps.lawyer_user),
     supabase: SupabaseService = Depends(deps.get_supabase_service),
 ) -> AnswerResponse:
     profile = await supabase.get_lawyer_profile(user.id)

@@ -13,7 +13,7 @@ router = APIRouter(prefix="/lawyers", tags=["lawyers"])
 @router.post("/verify", response_model=LawyerProfileResponse, status_code=status.HTTP_201_CREATED)
 async def submit_verification(
     payload: LawyerVerificationRequest,
-    user: AuthenticatedUser = Depends(deps.lawyer_user()),
+    user: AuthenticatedUser = Depends(deps.lawyer_user),
     supabase: SupabaseService = Depends(deps.get_supabase_service),
 ) -> LawyerProfileResponse:
     profile_payload = {
