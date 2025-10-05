@@ -93,6 +93,16 @@ class SupabaseService:
         data = await self._post("/documents", payload)
         return data[0]
 
+    async def update_question_ai_answer(self, question_id: str, ai_answer: JsonDict) -> JsonDict:
+        data = await self._patch(
+            "/questions",
+            {"ai_answer": ai_answer},
+            params={"id": f"eq.{question_id}"},
+        )
+        if not data:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Question not found")
+        return data[0]
+
     async def _get(self, path: str, *, params: dict[str, str] | None = None) -> list[JsonDict]:
         async with httpx.AsyncClient(base_url=self._rest_url, headers=self._headers, timeout=10.0) as client:
             response = await client.get(path, params=params)

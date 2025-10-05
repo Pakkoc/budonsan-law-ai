@@ -27,6 +27,7 @@ where psql >nul 2>&1 || ( echo [ERROR] psql not found in PATH. Install PostgreSQ
 call :run_sql 00_extensions.sql
 call :run_sql 01_types.sql
 call :run_sql 10_tables.sql
+call :run_sql 15_vector_tables.sql
 call :run_sql 05_functions.sql
 call :run_sql 20_rls.sql
 

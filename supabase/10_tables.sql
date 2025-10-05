@@ -56,3 +56,13 @@ create table if not exists public.documents (
 );
 
 
+-- Vector store for LangChain RAG
+create table if not exists public.legal_documents (
+  id uuid primary key default gen_random_uuid(),
+  content text not null,
+  metadata jsonb not null default '{}'::jsonb,
+  embedding vector(1536) not null
+);
+
+create index if not exists idx_legal_documents_embedding on public.legal_documents using ivfflat (embedding vector_cosine_ops) with (lists = 100);
+

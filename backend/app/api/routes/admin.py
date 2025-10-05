@@ -1,11 +1,13 @@
 ﻿from __future__ import annotations
 
-from fastapi import APIRouter, Depends, Path, status
+from fastapi import APIRouter, Depends, Path, UploadFile, status
 
 from app.api import deps
+from app.core.config import Settings, get_settings
 from app.core.security import AuthenticatedUser
 from app.schemas.document import DocumentCreate, DocumentResponse
 from app.schemas.lawyer import LawyerProfileResponse, LawyerStatusUpdate
+from app.services.rag import RAGService
 from app.services.supabase import SupabaseService
 
 router = APIRouter(prefix="/admin", tags=["admin"])
@@ -14,7 +16,7 @@ router = APIRouter(prefix="/admin", tags=["admin"])
 @router.post("/documents", response_model=DocumentResponse, status_code=status.HTTP_201_CREATED)
 async def create_document(
     payload: DocumentCreate,
-    user: AuthenticatedUser = Depends(deps.admin_user),
+    user: AuthenticatedUser = Depends(deps.dev_admin_user),  # 🧪 개발용: 인증 생략
     supabase: SupabaseService = Depends(deps.get_supabase_service),
 ) -> DocumentResponse:
     document = await supabase.create_document({**payload.model_dump(), "uploaded_by": user.id})
@@ -34,3 +36,44 @@ async def update_lawyer_status(
         balance_override=payload.reset_balance,
     )
     return LawyerProfileResponse.model_validate(updated)
+
+
+@router.post("/documents/ingest", status_code=status.HTTP_202_ACCEPTED)
+async def ingest_document_pdf(
+    file: UploadFile,
+    document_id: str,
+    admin: AuthenticatedUser = Depends(deps.dev_admin_user),  # 🧪 개발용: 인증 생략
+    settings: Settings = Depends(get_settings),
+) -> dict[str, str | int]:
+    """
+    Ingest a PDF document into the vector store for RAG.
+    
+    This endpoint:
+    1. Saves the uploaded PDF temporarily
+    2. Splits it into chunks
+    3. Generates embeddings
+    4. Stores embeddings in Supabase vector store
+    """
+    import tempfile
+    from pathlib import Path as FilePath
+    
+    # Save uploaded file temporarily
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp_file:
+        content = await file.read()
+        tmp_file.write(content)
+        tmp_path = tmp_file.name
+    
+    try:
+        # Ingest PDF into vector store
+        rag_service = RAGService(settings)
+        chunk_count = await rag_service.ingest_pdf(tmp_path, document_id)
+        
+        return {
+            "status": "success",
+            "document_id": document_id,
+            "chunks_created": chunk_count,
+            "message": f"Successfully ingested {chunk_count} chunks",
+        }
+    finally:
+        # Clean up temporary file
+        FilePath(tmp_path).unlink(missing_ok=True)
